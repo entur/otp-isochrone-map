@@ -6,7 +6,7 @@ import isValid from "date-fns/isValid"
 
 import './App.css';
 
-mapboxgl.accessToken = 'pk.eyJ1IjoiaGFubmVzIiwiYSI6IkhHbWdpSjgifQ.zZUfefvAwRczzYn5DeqvjQ';
+mapboxgl.accessToken = 'pk.eyJ1IjoiZW50dXIiLCJhIjoiY2o3dDF5ZWlrNGoyNjJxbWpscTlnMDJ2MiJ9.WLaC_f_uxaD1FLyZEjuchA';
 
 const LNG = 10.745;
 const LAT = 59.909;
@@ -46,7 +46,7 @@ function App() {
         if (!mapContainer.current || map.current) return; // initialize map only once
         map.current = new mapboxgl.Map({
             container: mapContainer.current,
-            style: 'mapbox://styles/hannes/cl2d6t7k000rq14mqv1pcebtu',
+            style: 'mapbox://styles/entur/cl32qnjg9000i14qjgf141erd',
             center: [LNG, LAT],
             zoom: ZOOM
         });
