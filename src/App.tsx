@@ -1,4 +1,4 @@
-import React, {useRef, useEffect, useState} from 'react';
+import React, {useRef, useEffect, useState, useCallback, useMemo} from 'react';
 import mapboxgl from 'mapbox-gl';
 import type GeoJSON from 'geojson';
 import format from "date-fns/format"
@@ -30,6 +30,19 @@ async function fetchIsochrones([lng, lat]: [number, number], time: Date, ...cuto
 
 function formatLocalTime(date: Date): string {
     return format(date, "yyyy-MM-dd'T'HH:mm")
+}
+
+const debounce = (callback: Function, wait: number) => {
+    let timeoutId: number | null = null;
+    return (...args: any) => {
+        if (timeoutId) {
+            window.clearTimeout(timeoutId);
+        }
+      
+        timeoutId = window.setTimeout(() => {
+            callback.apply(null, args);
+        }, wait);
+    };
 }
 
 function App() {
@@ -102,6 +115,39 @@ function App() {
         }
     }, [isochrones]);
 
+    const [features, setFeatures] = useState<any>(null);
+
+    const searchPlaces = useCallback(async (searchString: string) => {
+        const response = await fetch(`https://api.dev.entur.io/geocoder/v1/autocomplete?text=${searchString}`);
+        const data = await response.json();
+        setFeatures(data.features);
+    }, [setFeatures]);
+
+    const debouncedSearchPlaces = useMemo(
+        () => debounce(searchPlaces, 300)
+    , [searchPlaces]);
+
+    const [selectedFeature, setSelectedFeature] = useState<any>(null);
+    
+    const selectPlace = useCallback((id: string) => {
+        const feature = features.find((f: any) => f.properties.id === id);
+        setSelectedFeature(
+            feature
+        );
+
+        setCoordinates(feature.geometry.coordinates);
+        map.current?.setCenter(feature.geometry.coordinates);
+        marker.current?.setLngLat(feature.geometry.coordinates);
+    }, [features, setSelectedFeature]);
+
+    const reset = useCallback(() => {
+        setSelectedFeature(null);
+        setFeatures(null);
+        setTimeout(() => {
+            document.getElementById('autocomplete')?.focus();
+        });
+    }, []);
+
     return (
         <div className="App">
             <div className="sidebar">
@@ -113,7 +159,21 @@ function App() {
                         setCurrentTime(newDate)
                     }
             }} type="datetime-local"/>} |
-                Cutoffs: {<input defaultValue={cutoffs} onBlur={e => setCutoffs(e.target.value)}/>}
+                Cutoffs: {<input defaultValue={cutoffs} onBlur={e => setCutoffs(e.target.value)}/>}  |
+                Find place: {!features && !selectedFeature  && (
+                    <input id="autocomplete" onChange={e => debouncedSearchPlaces(e.target.value)}/>
+                )}
+                {selectedFeature && (
+                    <input defaultValue={selectedFeature?.properties?.name || ''} onClick={() => reset()}/>
+                )}
+                {features && !selectedFeature && (
+                    <select value={selectedFeature?.properties?.name || '---Select place---'} onChange={(e) => selectPlace(e.target.value)}>
+                        <option disabled>---Select place---</option>
+                        {features.map((f: any) => (
+                            <option key={f.properties.id } value={f.properties.id}>{f?.properties?.name}</option>
+                        ))}
+                    </select>
+                )}
             </div>
             <div ref={mapContainer} className="map-container"/>
         </div>
